@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static pro.sky.recommendation.repository.RecommendationsRepository.*;
-//test//test
+
 @Component
 public class SimpleCreditRuleSet implements RecommendationRuleSet {
     private static final UUID ID = UUID.fromString("ab138afb-f3ba-4a93-b74f-0fcee86d447f");

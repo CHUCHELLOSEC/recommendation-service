@@ -26,7 +26,7 @@ public class Invest500RuleSet implements RecommendationRuleSet {
     public Invest500RuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
-    //test//test
+
     @Override
     public Optional<RecommendationDto> check(UUID userId) {
         boolean hasDebit = repository.usesProductType(userId, DEBIT);
