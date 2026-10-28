@@ -46,4 +46,3 @@ public class RecommendationDto {
         return Objects.hash(name, id, text);
     }
 }
-//test//test

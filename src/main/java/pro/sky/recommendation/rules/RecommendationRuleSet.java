@@ -13,4 +13,3 @@ public interface RecommendationRuleSet {
 
     Optional<RecommendationDto> check(UUID userId);
 }
-//test//test

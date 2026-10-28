@@ -60,4 +60,3 @@ public class RecommendationsRepository {
         return sum == null ? 0 : sum;
     }
 }
-//test//test
