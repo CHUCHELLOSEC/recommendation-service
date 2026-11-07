@@ -28,4 +28,3 @@ public class RecommendationsResponse {
         return recommendations;
     }
 }
-//test//test
