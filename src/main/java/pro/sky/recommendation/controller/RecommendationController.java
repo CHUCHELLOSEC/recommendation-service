@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pro.sky.recommendation.dto.RecommendationsResponse;
 import pro.sky.recommendation.service.RecommendationService;
 import java.util.UUID;
-//test//test
+
 @RestController
 public class RecommendationController {
 

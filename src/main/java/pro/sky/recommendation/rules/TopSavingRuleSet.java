@@ -37,7 +37,7 @@ public class TopSavingRuleSet implements RecommendationRuleSet {
     public TopSavingRuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
-    //test//test
+
     @Override
     public Optional<RecommendationDto> check(UUID userId) {
         // Самое дешёвое условие первым: если дебетовых продуктов нет, остальные запросы не нужны
