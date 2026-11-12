@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import pro.sky.recommendation.dto.RuleStatResponse;
 import pro.sky.recommendation.model.DynamicRule;
 import pro.sky.recommendation.service.DynamicRuleService;
+import pro.sky.recommendation.service.RuleStatService;
 
 import java.util.List;
 import java.util.Map;
@@ -20,9 +22,11 @@ import java.util.UUID;
 public class RuleController {
 
     private final DynamicRuleService service;
+    private final RuleStatService statService; // НОВОЕ
 
-    public RuleController(DynamicRuleService service) {
+    public RuleController(DynamicRuleService service, RuleStatService statService) { // ИЗМЕНЕНО
         this.service = service;
+        this.statService = statService; // НОВОЕ
     }
 
     @PostMapping
@@ -33,6 +37,12 @@ public class RuleController {
     @GetMapping
     public Map<String, List<DynamicRule>> getAll() {
         return Map.of("data", service.findAll());
+    }
+
+    // НОВОЕ: GET /rule/stats
+    @GetMapping("/stats")
+    public Map<String, List<RuleStatResponse>> getStats() {
+        return Map.of("stats", statService.getAll());
     }
 
     @DeleteMapping("/{productId}")

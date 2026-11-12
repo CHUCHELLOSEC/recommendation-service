@@ -13,3 +13,12 @@ CREATE TABLE dynamic_rule (
 --changeset chuchelo:2
 CREATE INDEX idx_dynamic_rule_product_id ON dynamic_rule (product_id);
 --rollback DROP INDEX idx_dynamic_rule_product_id;
+
+--changeset chuchelo:3
+-- НОВОЕ: счётчики срабатываний правил
+CREATE TABLE rule_stat (
+                           id            UUID   PRIMARY KEY DEFAULT gen_random_uuid(),
+                           rule_id       UUID   NOT NULL UNIQUE REFERENCES dynamic_rule (id) ON DELETE CASCADE,
+                           trigger_count BIGINT NOT NULL DEFAULT 0
+);
+--rollback DROP TABLE rule_stat;
