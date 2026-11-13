@@ -7,13 +7,27 @@ import pro.sky.recommendation.repository.RecommendationsRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-import static pro.sky.recommendation.repository.RecommendationsRepository.*;
+import static pro.sky.recommendation.repository.RecommendationsRepository.DEBIT;
+import static pro.sky.recommendation.repository.RecommendationsRepository.DEPOSIT;
+import static pro.sky.recommendation.repository.RecommendationsRepository.SAVING;
+import static pro.sky.recommendation.repository.RecommendationsRepository.WITHDRAW;
 
+/**
+ * Статическое правило продукта «Top Saving».
+ *
+ * <p>Условия (все одновременно):</p>
+ * <ol>
+ *     <li>клиент пользуется хотя бы одним продуктом типа DEBIT;</li>
+ *     <li>сумма пополнений по DEBIT не меньше 50 000 <b>или</b> сумма пополнений по SAVING не меньше 50 000;</li>
+ *     <li>сумма пополнений по DEBIT больше суммы трат по DEBIT.</li>
+ * </ol>
+ */
 @Component
 public class TopSavingRuleSet implements RecommendationRuleSet {
 
     private static final UUID ID = UUID.fromString("59efc529-2fff-41af-baff-90ccd7402925");
     private static final String NAME = "Top Saving";
+    private static final long MIN_DEPOSIT = 50_000;
     private static final String TEXT = """
             Откройте свою собственную «Копилку» с нашим банком! «Копилка» — это уникальный банковский инструмент, \
             который поможет вам легко и удобно накапливать деньги на важные цели. \
@@ -34,10 +48,18 @@ public class TopSavingRuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
 
+    /**
+     * Создаёт правило.
+     *
+     * @param repository репозиторий основной БД
+     */
     public TopSavingRuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<RecommendationDto> check(UUID userId) {
         // Самое дешёвое условие первым: если дебетовых продуктов нет, остальные запросы не нужны
@@ -48,12 +70,11 @@ public class TopSavingRuleSet implements RecommendationRuleSet {
         long debitDeposit = repository.sumByTransactionType(userId, DEBIT, DEPOSIT);
         long debitWithdraw = repository.sumByTransactionType(userId, DEBIT, WITHDRAW);
 
-        boolean enoughOnDebit = debitDeposit >= 50_000;
-        // Второй запрос выполнится только если первое условие в «ИЛИ» не сработало
-        boolean enough = enoughOnDebit
-                || repository.sumByTransactionType(userId, SAVING, DEPOSIT) >= 50_000;
+        // Сумма по SAVING запрашивается только если условие по DEBIT не выполнилось (ленивое «ИЛИ»)
+        boolean enoughDeposit = debitDeposit >= MIN_DEPOSIT
+                || repository.sumByTransactionType(userId, SAVING, DEPOSIT) >= MIN_DEPOSIT;
 
-        if (enough && debitDeposit > debitWithdraw) {
+        if (enoughDeposit && debitDeposit > debitWithdraw) {
             return Optional.of(new RecommendationDto(NAME, ID, TEXT));
         }
         return Optional.empty();

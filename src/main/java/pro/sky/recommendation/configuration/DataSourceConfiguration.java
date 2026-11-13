@@ -20,6 +20,15 @@ import pro.sky.recommendation.repository.DynamicRuleRepository;
 
 import javax.sql.DataSource;
 
+/**
+ * Настройка двух источников данных.
+ *
+ * <ul>
+ *     <li>{@code defaultDataSource} (H2, только чтение): транзакции клиентов, работа через {@code JdbcTemplate};</li>
+ *     <li>{@code rulesDataSource} (PostgreSQL): динамические правила и статистика, работа через JPA,
+ *     схема создаётся Liquibase.</li>
+ * </ul>
+ */
 @Configuration
 @EnableJpaRepositories(
         basePackageClasses = DynamicRuleRepository.class,
@@ -27,7 +36,13 @@ import javax.sql.DataSource;
         transactionManagerRef = "rulesTransactionManager")
 public class DataSourceConfiguration {
 
-    // Основная БД: H2 с данными о транзакциях (только чтение)
+    /**
+     * Основная БД H2 с данными о транзакциях. Помечена {@link Primary}, поэтому
+     * автоматически настроенный {@code JdbcTemplate} работает именно с ней.
+     *
+     * @param properties свойства {@code spring.datasource.*}
+     * @return пул соединений к H2
+     */
     @Primary
     @Bean(name = "defaultDataSource")
     @ConfigurationProperties("spring.datasource.hikari")
@@ -35,8 +50,12 @@ public class DataSourceConfiguration {
         return properties.initializeDataSourceBuilder().build();
     }
 
-    // Вторая БД: PostgreSQL с динамическими правилами.
-    // @LiquibaseDataSource говорит Liquibase выполнять миграции именно здесь, а не в H2.
+    /**
+     * Вторая БД PostgreSQL с динамическими правилами.
+     * {@link LiquibaseDataSource} указывает Liquibase выполнять миграции здесь, а не в H2.
+     *
+     * @return пул соединений к PostgreSQL, настроенный свойствами {@code rules.datasource.*}
+     */
     @Bean(name = "rulesDataSource")
     @LiquibaseDataSource
     @ConfigurationProperties("rules.datasource")
@@ -44,7 +63,13 @@ public class DataSourceConfiguration {
         return DataSourceBuilder.create().type(HikariDataSource.class).build();
     }
 
-    // JPA (Hibernate) работает только со второй БД
+    /**
+     * Фабрика JPA (Hibernate), работающая только со второй БД.
+     *
+     * @param builder    построитель фабрики от Spring Boot
+     * @param dataSource источник данных PostgreSQL
+     * @return фабрика менеджеров сущностей для пакета {@code model}
+     */
     @Bean(name = "rulesEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean rulesEntityManagerFactory(
             EntityManagerFactoryBuilder builder,
@@ -56,6 +81,12 @@ public class DataSourceConfiguration {
                 .build();
     }
 
+    /**
+     * Менеджер транзакций для второй БД. Используется в {@code @Transactional("rulesTransactionManager")}.
+     *
+     * @param entityManagerFactory фабрика JPA для PostgreSQL
+     * @return менеджер транзакций JPA
+     */
     @Bean(name = "rulesTransactionManager")
     public PlatformTransactionManager rulesTransactionManager(
             @Qualifier("rulesEntityManagerFactory") EntityManagerFactory entityManagerFactory) {

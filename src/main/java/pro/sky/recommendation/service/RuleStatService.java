@@ -11,26 +11,41 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Статистика срабатываний динамических правил.
+ */
 @Service
 public class RuleStatService {
 
     private final RuleStatRepository statRepository;
     private final DynamicRuleRepository ruleRepository;
 
+    /**
+     * Создаёт сервис.
+     *
+     * @param statRepository репозиторий статистики
+     * @param ruleRepository репозиторий динамических правил
+     */
     public RuleStatService(RuleStatRepository statRepository, DynamicRuleRepository ruleRepository) {
         this.statRepository = statRepository;
         this.ruleRepository = ruleRepository;
     }
 
-    /** Правило сработало: счётчик +1 (одним атомарным запросом). */
+    /**
+     * Увеличивает счётчик срабатываний правила на 1 одним атомарным запросом.
+     *
+     * @param ruleId идентификатор сработавшего правила
+     */
     @Transactional("rulesTransactionManager")
     public void increment(UUID ruleId) {
         statRepository.increment(ruleId);
     }
 
     /**
-     * Статистика по ВСЕМ правилам. Список строим от таблицы правил,
+     * Статистика по всем правилам. Список строится от таблицы правил,
      * поэтому правило без срабатываний попадает в ответ со значением 0.
+     *
+     * @return число срабатываний для каждого существующего правила
      */
     @Transactional(value = "rulesTransactionManager", readOnly = true)
     public List<RuleStatResponse> getAll() {

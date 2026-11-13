@@ -19,10 +19,18 @@ import pro.sky.recommendation.service.UserService;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Telegram-бот, который выдаёт клиенту рекомендации по команде {@code /recommend username}.
+ *
+ * <p>Любое другое сообщение (в том числе {@code /start}) получает приветствие и справку.
+ * Если токен бота не задан, бот не подписывается на обновления, а сервис продолжает работать.</p>
+ */
 @Component
 public class RecommendationBot implements UpdatesListener {
 
     private static final Logger log = LoggerFactory.getLogger(RecommendationBot.class);
+
+    private static final String RECOMMEND_COMMAND = "/recommend";
 
     private static final String USER_NOT_FOUND = "Пользователь не найден";
 
@@ -40,6 +48,14 @@ public class RecommendationBot implements UpdatesListener {
     private final RecommendationService recommendationService;
     private final String token;
 
+    /**
+     * Создаёт бота.
+     *
+     * @param telegramBot           клиент Telegram Bot API
+     * @param userService           поиск клиента банка по имени пользователя
+     * @param recommendationService подбор рекомендаций
+     * @param token                 токен бота; пустая строка отключает бота
+     */
     public RecommendationBot(TelegramBot telegramBot,
                              UserService userService,
                              RecommendationService recommendationService,
@@ -50,7 +66,10 @@ public class RecommendationBot implements UpdatesListener {
         this.token = token;
     }
 
-    // Выполняется один раз после создания бина: подписываем класс на сообщения
+    /**
+     * Подписывает бота на обновления Telegram после создания бина.
+     * Без токена подписка не выполняется.
+     */
     @PostConstruct
     public void init() {
         if (token.isBlank()) {
@@ -60,14 +79,19 @@ public class RecommendationBot implements UpdatesListener {
         telegramBot.setUpdatesListener(this);
     }
 
-    // Telegram присылает сообщения пачкой, обрабатываем каждое
+    /**
+     * Обрабатывает пачку обновлений от Telegram.
+     * Ошибка в одном сообщении логируется и не останавливает обработку остальных.
+     *
+     * @param updates обновления, полученные от Telegram
+     * @return {@link UpdatesListener#CONFIRMED_UPDATES_ALL}: все обновления подтверждены
+     */
     @Override
     public int process(List<Update> updates) {
         for (Update update : updates) {
             try {
                 handle(update);
             } catch (Exception e) {
-                // Ошибка в одном сообщении не должна останавливать бота
                 log.error("Ошибка при обработке сообщения", e);
             }
         }
@@ -84,20 +108,20 @@ public class RecommendationBot implements UpdatesListener {
         String[] parts = message.text().trim().split("\\s+", 2);
         String command = parts[0];
 
-        if (command.equals("/recommend") || command.startsWith("/recommend@")) {
+        // В групповых чатах команда приходит в виде /recommend@BotName
+        if (command.equals(RECOMMEND_COMMAND) || command.startsWith(RECOMMEND_COMMAND + "@")) {
             if (parts.length < 2 || parts[1].isBlank()) {
                 send(chatId, "Укажите имя пользователя: /recommend username");
                 return;
             }
             send(chatId, buildRecommendations(parts[1].trim()));
         } else {
-            // /start и любое другое сообщение: приветствие и справка
             send(chatId, WELCOME_AND_HELP);
         }
     }
 
     private String buildRecommendations(String username) {
-        // Ровно один пользователь: идём дальше. Ноль или несколько: «Пользователь не найден»
+        // Ровно одно совпадение: показываем рекомендации. Ноль или несколько: «Пользователь не найден»
         Optional<BankUser> user = userService.findUniqueByUsername(username);
         if (user.isEmpty()) {
             return USER_NOT_FOUND;

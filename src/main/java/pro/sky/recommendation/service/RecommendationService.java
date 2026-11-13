@@ -12,21 +12,37 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Главный сервис подбора рекомендаций: объединяет статические и динамические правила.
+ */
 @Service
 public class RecommendationService {
 
     private final List<RecommendationRuleSet> ruleSets;
     private final DynamicRecommendationService dynamicService;
 
+    /**
+     * Создаёт сервис.
+     *
+     * @param ruleSets       все статические правила (бины {@link RecommendationRuleSet})
+     * @param dynamicService сервис динамических правил
+     */
     public RecommendationService(List<RecommendationRuleSet> ruleSets,
                                  DynamicRecommendationService dynamicService) {
         this.ruleSets = ruleSets;
         this.dynamicService = dynamicService;
     }
 
+    /**
+     * Подбирает рекомендации: сначала статические правила, затем динамические.
+     * Каждый продукт попадает в ответ не больше одного раза.
+     *
+     * @param userId идентификатор клиента
+     * @return ответ с рекомендациями (список может быть пустым)
+     */
     public RecommendationsResponse getRecommendations(UUID userId) {
-        // LinkedHashMap по id продукта: один продукт не попадёт в ответ дважды,
-        // даже если он есть и в фиксированных, и в динамических правилах
+        // LinkedHashMap по id продукта сохраняет порядок и убирает дубликаты,
+        // если продукт есть и в статических, и в динамических правилах
         Map<UUID, RecommendationDto> result = new LinkedHashMap<>();
 
         ruleSets.stream()

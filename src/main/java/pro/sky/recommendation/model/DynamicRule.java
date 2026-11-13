@@ -13,6 +13,10 @@ import org.hibernate.type.SqlTypes;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Динамическое правило рекомендации: продукт и список запросов, которые должны выполниться все.
+ * Хранится в таблице {@code dynamic_rule} второй БД; используется и как сущность JPA, и как тело REST API.
+ */
 @Entity
 @Table(name = "dynamic_rule")
 public class DynamicRule {
@@ -38,21 +42,79 @@ public class DynamicRule {
     @Column(name = "rule", nullable = false, columnDefinition = "jsonb")
     private List<RuleQuery> rule;
 
+    /**
+     * Конструктор для JPA и Jackson.
+     */
     public DynamicRule() {
     }
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    /**
+     * @return идентификатор правила
+     */
+    public UUID getId() {
+        return id;
+    }
 
-    public String getProductName() { return productName; }
-    public void setProductName(String productName) { this.productName = productName; }
+    /**
+     * @param id идентификатор правила
+     */
+    public void setId(UUID id) {
+        this.id = id;
+    }
 
-    public UUID getProductId() { return productId; }
-    public void setProductId(UUID productId) { this.productId = productId; }
+    /**
+     * @return название продукта
+     */
+    public String getProductName() {
+        return productName;
+    }
 
-    public String getProductText() { return productText; }
-    public void setProductText(String productText) { this.productText = productText; }
+    /**
+     * @param productName название продукта
+     */
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
 
-    public List<RuleQuery> getRule() { return rule; }
-    public void setRule(List<RuleQuery> rule) { this.rule = rule; }
+    /**
+     * @return идентификатор продукта
+     */
+    public UUID getProductId() {
+        return productId;
+    }
+
+    /**
+     * @param productId идентификатор продукта
+     */
+    public void setProductId(UUID productId) {
+        this.productId = productId;
+    }
+
+    /**
+     * @return текст рекомендации
+     */
+    public String getProductText() {
+        return productText;
+    }
+
+    /**
+     * @param productText текст рекомендации
+     */
+    public void setProductText(String productText) {
+        this.productText = productText;
+    }
+
+    /**
+     * @return запросы правила, объединённые логическим «И»
+     */
+    public List<RuleQuery> getRule() {
+        return rule;
+    }
+
+    /**
+     * @param rule запросы правила, объединённые логическим «И»
+     */
+    public void setRule(List<RuleQuery> rule) {
+        this.rule = rule;
+    }
 }
