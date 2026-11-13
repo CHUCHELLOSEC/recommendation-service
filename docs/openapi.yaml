@@ -1,0 +1,277 @@
+openapi: 3.0.1
+info:
+  title: Recommendation Service API
+  description: >-
+    Сервис рекомендаций банка «Стар»: рекомендации банковских продуктов,
+    управление динамическими правилами и служебные эндпоинты.
+    Живая версия спецификации доступна у запущенного сервиса: /v3/api-docs (JSON), /swagger-ui.html (Swagger UI).
+  version: 0.0.1-SNAPSHOT
+servers:
+  - url: http://localhost:8080
+    description: Локальный запуск
+tags:
+  - name: Recommendations
+    description: Рекомендации банковских продуктов (актор «Пользователь»)
+  - name: Dynamic rules
+    description: Управление динамическими правилами и статистика (актор «Менеджер»)
+  - name: Management
+    description: Служебные операции (актор «Внешняя система»)
+
+paths:
+  /recommendation/{user_id}:
+    get:
+      tags: [ Recommendations ]
+      summary: Получить рекомендации для клиента
+      description: >-
+        Применяет статические правила (Invest 500, Top Saving, Простой кредит), затем динамические.
+        Каждый продукт встречается в ответе не больше одного раза. Сработавшие динамические правила
+        увеличивают свой счётчик в статистике.
+      operationId: getRecommendations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Идентификатор клиента
+          schema:
+            type: string
+            format: uuid
+          example: cd515076-5d8a-44be-930e-8d4fcb79f42d
+      responses:
+        "200":
+          description: Рекомендации (список может быть пустым)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationsResponse'
+        "400":
+          description: user_id не является UUID
+
+  /rule:
+    post:
+      tags: [ Dynamic rules ]
+      summary: Создать динамическое правило
+      operationId: addRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DynamicRuleRequest'
+            example:
+              product_name: Простой кредит
+              product_id: ab138afb-f3ba-4a93-b74f-0fcee86d447f
+              product_text: <текст рекомендации>
+              rule:
+                - query: USER_OF
+                  arguments: [ CREDIT ]
+                  negate: true
+                - query: TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW
+                  arguments: [ DEBIT, ">" ]
+                  negate: false
+                - query: TRANSACTION_SUM_COMPARE
+                  arguments: [ DEBIT, WITHDRAW, ">", "100000" ]
+                  negate: false
+      responses:
+        "200":
+          description: Правило сохранено, id выдан сервером
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DynamicRule'
+        "400":
+          description: Обязательные поля не заданы или запрос правила некорректен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Недопустимый тип продукта: CRYPTO. Допустимо: [DEBIT, CREDIT, INVEST, SAVING]"
+    get:
+      tags: [ Dynamic rules ]
+      summary: Получить все динамические правила
+      operationId: getAllRules
+      responses:
+        "200":
+          description: Все правила
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DynamicRule'
+
+  /rule/{product_id}:
+    delete:
+      tags: [ Dynamic rules ]
+      summary: Удалить динамическое правило продукта
+      description: Удаляет правила продукта; их статистика удаляется каскадно.
+      operationId: deleteRule
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: Идентификатор продукта
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Правило удалено (или не существовало)
+        "400":
+          description: product_id не является UUID
+
+  /rule/stats:
+    get:
+      tags: [ Dynamic rules ]
+      summary: Получить статистику срабатываний правил
+      description: Возвращает счётчик для каждого существующего правила; правило без срабатываний имеет count = 0.
+      operationId: getStats
+      responses:
+        "200":
+          description: Статистика
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RuleStat'
+              example:
+                stats:
+                  - rule_id: 2f8a1c3e-8b1d-4c6a-9e4b-5a0f3c2d1e7b
+                    count: 12
+                  - rule_id: 7d2e9b4a-1c3f-4e5d-8a6b-9c0d1e2f3a4b
+                    count: 0
+
+  /management/clear-caches:
+    post:
+      tags: [ Management ]
+      summary: Сбросить все кеши запросов к основной БД
+      operationId: clearCaches
+      responses:
+        "200":
+          description: Кеши очищены, тело ответа пустое
+
+  /management/info:
+    get:
+      tags: [ Management ]
+      summary: Получить имя и версию сервиса
+      operationId: info
+      responses:
+        "200":
+          description: Имя артефакта и версия из pom.xml
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceInfo'
+              example:
+                name: recommendation-service
+                version: 0.0.1-SNAPSHOT
+
+components:
+  schemas:
+    RecommendationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Invest 500
+        id:
+          type: string
+          format: uuid
+          example: 147f6a0f-3b91-413b-ab99-87f081d60d5a
+        text:
+          type: string
+          example: Откройте свой путь к успеху с индивидуальным инвестиционным счетом (ИИС)...
+
+    RecommendationsResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationDto'
+
+    RuleQuery:
+      type: object
+      required: [ query, arguments ]
+      description: >-
+        Один запрос правила. Типы и аргументы:
+        USER_OF [productType];
+        ACTIVE_USER_OF [productType] (не меньше 5 транзакций);
+        TRANSACTION_SUM_COMPARE [productType, transactionType, operator, constant];
+        TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW [productType, operator].
+        productType: DEBIT | CREDIT | INVEST | SAVING; transactionType: DEPOSIT | WITHDRAW;
+        operator: > | < | = | >= | <=; constant: неотрицательное целое.
+      properties:
+        query:
+          type: string
+          enum: [ USER_OF, ACTIVE_USER_OF, TRANSACTION_SUM_COMPARE, TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW ]
+        arguments:
+          type: array
+          items:
+            type: string
+        negate:
+          type: boolean
+          default: false
+          description: true инвертирует результат запроса
+
+    DynamicRuleRequest:
+      type: object
+      required: [ product_name, product_id, product_text, rule ]
+      properties:
+        product_name:
+          type: string
+        product_id:
+          type: string
+          format: uuid
+        product_text:
+          type: string
+        rule:
+          type: array
+          minItems: 1
+          description: Запросы, объединённые логическим «И»
+          items:
+            $ref: '#/components/schemas/RuleQuery'
+
+    DynamicRule:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Идентификатор правила, выдаётся сервером
+        - $ref: '#/components/schemas/DynamicRuleRequest'
+
+    RuleStat:
+      type: object
+      properties:
+        rule_id:
+          type: string
+          format: uuid
+        count:
+          type: integer
+          format: int64
+
+    ServiceInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string

@@ -6,11 +6,18 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Набор правил одного продукта.
- * Если пользователь подходит, возвращает рекомендацию, иначе пустой Optional.
+ * Статическое правило (набор условий) одного продукта, зашитое в код.
+ *
+ * <p>Чтобы добавить новое статическое правило, достаточно создать Spring-бин ({@code @Component}),
+ * реализующий этот интерфейс: {@code RecommendationService} получает все реализации автоматически.</p>
  */
 public interface RecommendationRuleSet {
 
+    /**
+     * Проверяет, подходит ли продукт клиенту.
+     *
+     * @param userId идентификатор клиента
+     * @return рекомендация, если все условия выполнены, иначе пустой {@link Optional}
+     */
     Optional<RecommendationDto> check(UUID userId);
 }
-//test//test
